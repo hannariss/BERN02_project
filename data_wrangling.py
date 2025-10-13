@@ -65,4 +65,5 @@ cols_ordered = [
 ]
 
 df = df[cols_ordered]
+df.to_csv("data\Stress_wrangled.csv")
 
