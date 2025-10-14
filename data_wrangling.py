@@ -1,9 +1,11 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import os
 
 # Load data
-df = pd.read_csv("data\Stress_Dataset.csv")
+
+df = pd.read_csv(os.path.join('data', 'Stress_Dataset.csv'))
 df = df.drop('Have you been dealing with anxiety or tension recently?.1', axis=1)
 
 # keywords for column titles 
@@ -65,5 +67,5 @@ cols_ordered = [
 ]
 
 df = df[cols_ordered]
-df.to_csv("data\Stress_wrangled.csv")
+df.to_csv(os.path.join('data', 'Stress_wrangled.csv'), index=False)
 
