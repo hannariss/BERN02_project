@@ -4,9 +4,9 @@ import sklearn as sk
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 
-stress_data = pd.read_csv('data/Stress_Dataset.csv')
+stress_data = pd.read_csv('data/Stress_wrangled.csv')
 
-stress_data.rename(columns={'Which type of stress do you primarily experience?': 'target'}, inplace=True)
+stress_data.rename(columns={'stresstype': 'target'}, inplace=True)
 label_encoder = sk.preprocessing.LabelEncoder()
 
 # Fit and transform
