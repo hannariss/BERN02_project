@@ -4,6 +4,8 @@ import sklearn as sk
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.feature_selection import SequentialFeatureSelector
+from mlxtend.feature_selection import SequentialFeatureSelector as SFS
+
 
 stress_data = pd.read_csv('data/Stress_wrangled.csv')
 
@@ -73,3 +75,7 @@ features_m.fit(X_train_m, y_train_m)
 all_features_m = features_m.feature_names_in_
 selected_m = all_features_m[features_m.support_]
 print(selected_m)
+
+sfs = SFS(multi_reg_f, k_features='best', forward=True)
+sfs = sfs.fit(X_train_f, y_train_f)
+results = pd.DataFrame.from_dict(sfs.get_metric_dict()).T
