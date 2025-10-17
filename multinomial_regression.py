@@ -9,32 +9,13 @@ from sklearn.metrics import accuracy_score, r2_score
 import matplotlib.pyplot as plt
 
 
+# load data
 stress_data = pd.read_csv('data/Stress_wrangled.csv')
 
+#------------------------
+# Data preparation
+#------------------------
 stress_data.rename(columns={'stresstype': 'target'}, inplace=True)
-label_encoder = sk.preprocessing.LabelEncoder()
-
-# Fit and transform
-stress_data['target_encoded'] = label_encoder.fit_transform(stress_data['target'])
-
-# define model
-multi_reg = LogisticRegression(solver='newton-cg', max_iter=1000)
-
-X = stress_data.drop(columns=['target', 'target_encoded'])
-y = stress_data['target_encoded']
-
-# split data
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-multi_reg.fit(X, y)
-pred_y = multi_reg.predict(X)
-
-# inspect coefficients
-classes = multi_reg.classes_
-# Coefficients (one row per class)
-coef_df_1 = pd.DataFrame(multi_reg.coef_, columns=X.columns, index=classes) 
-#column shows how strongly that predictor affects the odds of belonging to that class.
-
 
 # Different target codes
 target_order = {"Eustress (Positive Stress) - Stress that motivates and enhances performance.": 0, "No Stress - Currently experiencing minimal to no stress.": 1, "Distress (Negative Stress) - Stress that causes anxiety and impairs well-being.": 2}
@@ -57,26 +38,6 @@ X_train_m, X_test_m, y_train_m, y_test_m = train_test_split(X_m, y_m, test_size=
 # define model
 multi_reg_f = LogisticRegression(solver='newton-cg', max_iter=1000)
 multi_reg_m = LogisticRegression(solver='newton-cg', max_iter=1000)
-
-# multi_reg_f.fit(X_train_f, y_train_f)
-# pred_y_f = multi_reg_f.predict(X_test_f)
-
-# multi_reg_m.fit(X_train_m, y_train_m)
-# pred_y_m = multi_reg_m.predict(X_test_m)
-
-# Selection with scikit learn 
-# features_f = SequentialFeatureSelector(multi_reg_f)
-# features_m = SequentialFeatureSelector(multi_reg_m)
-
-# features_f.fit(X_train_f, y_train_f)
-# all_features_f = features_f.feature_names_in_
-# selected_f = all_features_f[features_f.support_]
-# print(selected_f)
-
-# features_m.fit(X_train_m, y_train_m)
-# all_features_m = features_m.feature_names_in_
-# selected_m = all_features_m[features_m.support_]
-# print(selected_m)
 
 #---------------------------------------------
 # Hyperparameter tuning for upper boundary
@@ -311,6 +272,7 @@ pred_ff = model_ff.predict(X_test_f[features_ff])
 
 # inspect coefficients
 # Coefficients (one row per class)
+classes = model_ff.classes_
 coef_ff = pd.DataFrame(model_ff.coef_, columns=X_test_f[features_ff].columns, index=classes) 
 coef_mf = pd.DataFrame(model_mf.coef_, columns=X_test_m[features_mf].columns, index=classes) 
 
