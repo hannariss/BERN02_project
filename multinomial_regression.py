@@ -5,7 +5,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.feature_selection import SequentialFeatureSelector
 from mlxtend.feature_selection import SequentialFeatureSelector as SFS
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, r2_score
 import matplotlib.pyplot as plt
 
 
@@ -220,3 +220,100 @@ plt.legend()
 plt.xticks(np.arange(1, len(df_accs_m.index) + 1, 1))
 plt.show()
 
+
+#---------------------------------------------
+# Fit models with optimum number of features
+#---------------------------------------------
+
+# Female: optimum of 6 features
+# Male: optimum of 5 features
+
+# check if the same features were selected in forward and floating
+
+## female
+# forward
+sfs_f_f = SFS(multi_reg_f, k_features=(1, 6), forward=True)
+sfs_f_f = sfs_f_f.fit(X_train_f, y_train_f)
+results_f_f = pd.DataFrame.from_dict(sfs_f_f.get_metric_dict()).T
+features_ff = list(sfs_f_f.k_feature_names_)
+
+# stepwise selection (floating)
+# sfs_f_s = SFS(multi_reg_f, k_features=(1, 6), forward=True, floating=True)
+# sfs_f_s = sfs_f_s.fit(X_train_f, y_train_f)
+# results_f_s = pd.DataFrame.from_dict(sfs_f_s.get_metric_dict()).T
+# features_fs = list(sfs_f_s.k_feature_names_)
+
+# features are the same for forward and floating selection, we take the forward selection model
+
+## male
+# forward
+sfs_m_f = SFS(multi_reg_m, k_features=(1, 5), forward=True)
+sfs_m_f = sfs_m_f.fit(X_train_m, y_train_m)
+results_m_f = pd.DataFrame.from_dict(sfs_m_f.get_metric_dict()).T
+features_mf = list(sfs_m_f.k_feature_names_)
+
+# stepwise selection (floating)
+# sfs_m_s = SFS(multi_reg_m, k_features=(1, 5), forward=True, floating=True)
+# sfs_m_s = sfs_m_s.fit(X_train_m, y_train_m)
+# results_m_s = pd.DataFrame.from_dict(sfs_m_s.get_metric_dict()).T
+# features_ms = list(sfs_m_s.k_feature_names_)
+
+
+# not the same features, check some scores
+model_mf = LogisticRegression(solver='newton-cg', max_iter=1000)
+model_mf.fit(X_train_m[features_mf], y_train_m)
+pred_mf = model_mf.predict(X_test_m[features_mf])
+acc_mf = accuracy_score(y_test_m, pred_mf)
+
+model_ms = LogisticRegression(solver='newton-cg', max_iter=1000)
+model_ms.fit(X_train_m[features_ms], y_train_m)
+pred_ms = model_ms.predict(X_test_m[features_ms])
+acc_ms = accuracy_score(y_test_m, pred_ms)
+
+r2_mf = r2_score(y_test_m, pred_mf)
+r2_ms = r2_score(y_test_m, pred_ms)
+
+# calculate AIC for male model to
+# find the better model between forward and floating
+
+#forward
+probs_mf = model_mf.predict_proba(X_test_m[features_mf])
+log_like = np.sum(np.log(probs_mf[np.arange(len(y_test_m)), y_test_m]))
+
+n_classes = 3
+n_features = len(features_mf)
+k = n_features * (n_classes -1) + (n_classes -1)
+
+aic_mf = 2*k - 2*log_like
+
+#floating
+probs_ms = model_ms.predict_proba(X_test_m[features_ms])
+log_like = np.sum(np.log(probs_ms[np.arange(len(y_test_m)), y_test_m]))
+
+n_classes = 3
+n_features = len(features_ms)
+k = n_features * (n_classes -1) + (n_classes -1)
+
+aic_ms = 2*k - 2*log_like
+print(f'forward: {aic_mf}, floating: {aic_ms}')
+# Conclusion: forward selection model is better
+
+#--------------------------------
+# Final model:
+# female: 6 features (forward)
+# male: 5 features (forward)
+#--------------------------------
+
+# fit model for female
+model_ff = LogisticRegression(solver='newton-cg', max_iter=1000)
+model_ff.fit(X_train_f[features_ff], y_train_f)
+pred_ff = model_ff.predict(X_test_f[features_ff])
+
+# inspect coefficients
+# Coefficients (one row per class)
+coef_ff = pd.DataFrame(model_ff.coef_, columns=X_test_f[features_ff].columns, index=classes) 
+coef_mf = pd.DataFrame(model_mf.coef_, columns=X_test_m[features_mf].columns, index=classes) 
+
+# save training and test data with selected features
+np.savetxt('features_ff.csv', features_ff, delimiter=",", fmt='%s')
+np.savetxt('features_mf.csv', features_mf, delimiter=",", fmt='%s')
