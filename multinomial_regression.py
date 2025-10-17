@@ -76,6 +76,11 @@ all_features_m = features_m.feature_names_in_
 selected_m = all_features_m[features_m.support_]
 print(selected_m)
 
-sfs = SFS(multi_reg_f, k_features='best', forward=True)
-sfs = sfs.fit(X_train_f, y_train_f)
-results = pd.DataFrame.from_dict(sfs.get_metric_dict()).T
+sfs_f = SFS(multi_reg_f, k_features='best', forward=True)
+sfs_f = sfs_f.fit(X_train_f, y_train_f)
+results_f = pd.DataFrame.from_dict(sfs_f.get_metric_dict()).T
+
+
+sfs_m = SFS(multi_reg_m, k_features='best', forward=True)
+sfs_m = sfs_m.fit(X_train_m, y_train_m)
+results_m = pd.DataFrame.from_dict(sfs_m.get_metric_dict()).T
