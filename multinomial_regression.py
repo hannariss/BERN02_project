@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.feature_selection import SequentialFeatureSelector
 from mlxtend.feature_selection import SequentialFeatureSelector as SFS
 from sklearn.metrics import accuracy_score
+import matplotlib.pyplot as plt
 
 
 stress_data = pd.read_csv('data/Stress_wrangled.csv')
@@ -77,46 +78,115 @@ multi_reg_m = LogisticRegression(solver='newton-cg', max_iter=1000)
 # selected_m = all_features_m[features_m.support_]
 # print(selected_m)
 
-#-------------------------------
-# Feature selection (mlxtend)
-#-------------------------------
-# Female model 
-## forward
-sfs_f_f = SFS(multi_reg_f, k_features=(1, 6), forward=True)
-sfs_f_f = sfs_f_f.fit(X_train_f, y_train_f)
-results_f_f = pd.DataFrame.from_dict(sfs_f_f.get_metric_dict()).T
-features_ff = list(sfs_f_f.k_feature_names_)
+#---------------------------------------------
+# Hyperparameter tuning for upper boundary
+#---------------------------------------------
 
-## backward
-sfs_f_b = SFS(multi_reg_f, k_features=(1, 6), forward=False)
-sfs_f_b = sfs_f_b.fit(X_train_f, y_train_f)
-results_f_b = pd.DataFrame.from_dict(sfs_f_b.get_metric_dict()).T
-features_fb = list(sfs_f_b.k_feature_names_)
+# Female
+if 0:
+    accs = [[],[],[]]
+    for upper in range(1, 11):
+        #-------------------------------
+        # Feature selection (mlxtend)
+        #-------------------------------
+        # forward
+        sfs_f_f = SFS(multi_reg_f, k_features=(1, upper), forward=True)
+        sfs_f_f = sfs_f_f.fit(X_train_f, y_train_f)
+        results_f_f = pd.DataFrame.from_dict(sfs_f_f.get_metric_dict()).T
+        features_ff = list(sfs_f_f.k_feature_names_)
 
-## stepwise selection (floating)
-sfs_f_s = SFS(multi_reg_f, k_features=(1, 6), forward=True, floating=True)
-sfs_f_s = sfs_f_s.fit(X_train_f, y_train_f)
-results_f_s = pd.DataFrame.from_dict(sfs_f_s.get_metric_dict()).T
-features_fs = list(sfs_f_s.k_feature_names_)
+        # backward
+        sfs_f_b = SFS(multi_reg_f, k_features=(1, upper), forward=False)
+        sfs_f_b = sfs_f_b.fit(X_train_f, y_train_f)
+        results_f_b = pd.DataFrame.from_dict(sfs_f_b.get_metric_dict()).T
+        features_fb = list(sfs_f_b.k_feature_names_)
 
-# # Male model
-# ## forward
-# sfs_m_f = SFS(multi_reg_m, k_features=(1, 10), forward=True)
-# sfs_m_f = sfs_m_f.fit(X_train_m, y_train_m)
-# results_m_f = pd.DataFrame.from_dict(sfs_m_f.get_metric_dict()).T
-# features_mf = list(sfs_m_f.k_feature_names_)
+        # stepwise selection (floating)
+        sfs_f_s = SFS(multi_reg_f, k_features=(1, upper), forward=True, floating=True)
+        sfs_f_s = sfs_f_s.fit(X_train_f, y_train_f)
+        results_f_s = pd.DataFrame.from_dict(sfs_f_s.get_metric_dict()).T
+        features_fs = list(sfs_f_s.k_feature_names_)
+        
+        #-------------------------------
+        # Model evaluation
+        #-------------------------------
+        model_ff = LogisticRegression(solver='newton-cg', max_iter=1000)
+        model_ff.fit(X_train_f[features_ff], y_train_f)
+        pred_ff = model_ff.predict(X_test_f[features_ff])
+        acc_ff = accuracy_score(y_test_f, pred_ff)
 
-# ## backward
-# sfs_m_b = SFS(multi_reg_m, k_features=(1, 10), forward=False)
-# sfs_m_b = sfs_m_b.fit(X_train_m, y_train_m)
-# results_m_b = pd.DataFrame.from_dict(sfs_m_b.get_metric_dict()).T
-# features_mb = list(sfs_m_b.k_feature_names_)
+        model_fb = LogisticRegression(solver='newton-cg', max_iter=1000)
+        model_fb.fit(X_train_f[features_fb], y_train_f)
+        pred_fb = model_fb.predict(X_test_f[features_fb])
+        acc_fb = accuracy_score(y_test_f, pred_fb)
 
-# ## stepwise selection (floating)
-# sfs_m_s = SFS(multi_reg_m, k_features=(1, 10), forward=True, floating=True)
-# sfs_m_s = sfs_m_s.fit(X_train_m, y_train_m)
-# results_m_s = pd.DataFrame.from_dict(sfs_m_s.get_metric_dict()).T
-# features_ms = list(sfs_m_s.k_feature_names_)
+        model_fs = LogisticRegression(solver='newton-cg', max_iter=1000)
+        model_fs.fit(X_train_f[features_fs], y_train_f)
+        pred_fs = model_fs.predict(X_test_f[features_fs])
+        acc_fs = accuracy_score(y_test_f, pred_fs)
+
+        accs[0].append(np.round(acc_ff, 4))
+        accs[1].append(np.round(acc_fb, 4))
+        accs[2].append(np.round(acc_fs, 4))
+        # check accuarcy of female model
+        # print(f'female forward: {np.round(acc_ff, 4)}, backward: {np.round(acc_fb, 4)}, stepwise: {np.round(acc_fs, 4)}')
+
+    accs = np.array(accs)
+    df_accs = pd.DataFrame({'forward' : accs[0], 'backward': accs[1], 'floating': accs[2]})
+    df_accs.to_csv('female_accuracies.csv')
+
+# Male
+if 0: 
+    accs = [[],[],[]]
+    for upper in range(1, 11):
+        #-------------------------------
+        # Feature selection (mlxtend)
+        #-------------------------------
+        # forward
+        sfs_m_f = SFS(multi_reg_m, k_features=(1, upper), forward=True)
+        sfs_m_f = sfs_m_f.fit(X_train_m, y_train_m)
+        results_m_f = pd.DataFrame.from_dict(sfs_m_f.get_metric_dict()).T
+        features_mf = list(sfs_m_f.k_feature_names_)
+
+        # backward
+        sfs_m_b = SFS(multi_reg_m, k_features=(1, upper), forward=False)
+        sfs_m_b = sfs_m_b.fit(X_train_m, y_train_m)
+        results_m_b = pd.DataFrame.from_dict(sfs_m_b.get_metric_dict()).T
+        features_mb = list(sfs_m_b.k_feature_names_)
+
+        # stepwise selection (floating)
+        sfs_m_s = SFS(multi_reg_m, k_features=(1, upper), forward=True, floating=True)
+        sfs_m_s = sfs_m_s.fit(X_train_m, y_train_m)
+        results_m_s = pd.DataFrame.from_dict(sfs_m_s.get_metric_dict()).T
+        features_ms = list(sfs_m_s.k_feature_names_)
+        
+        #-------------------------------
+        # Model evaluation
+        #-------------------------------
+        model_mf = LogisticRegression(solver='newton-cg', max_iter=1000)
+        model_mf.fit(X_train_m[features_mf], y_train_m)
+        pred_mf = model_mf.predict(X_test_m[features_mf])
+        acc_mf = accuracy_score(y_test_m, pred_mf)
+
+        model_mb = LogisticRegression(solver='newton-cg', max_iter=1000)
+        model_mb.fit(X_train_m[features_mb], y_train_m)
+        pred_mb = model_mb.predict(X_test_m[features_mb])
+        acc_mb = accuracy_score(y_test_m, pred_mb)
+
+        model_ms = LogisticRegression(solver='newton-cg', max_iter=1000)
+        model_ms.fit(X_train_m[features_ms], y_train_m)
+        pred_ms = model_ms.predict(X_test_m[features_ms])
+        acc_ms = accuracy_score(y_test_m, pred_ms)
+
+        accs[0].append(np.round(acc_mf, 4))
+        accs[1].append(np.round(acc_mb, 4))
+        accs[2].append(np.round(acc_ms, 4))
+        # # check accuarcy of male model
+        # print(f'male forward: {np.round(acc_mf, 4)}, backward: {np.round(acc_mb, 4)}, stepwise: {np.round(acc_ms, 4)}')
+    
+    accs = np.array(accs)
+    df_accs = pd.DataFrame({'forward' : accs[0], 'backward': accs[1], 'floating': accs[2]})
+    df_accs.to_csv('male_accuracies.csv')
 
 # with k_features='best' we get scores:
 # female forward: 0.9830508474576272, backward: 1.0, stepwise: 0.9830508474576272
@@ -126,43 +196,27 @@ features_fs = list(sfs_f_s.k_feature_names_)
 # female forward: 0.9491525423728814, backward: 0.9491525423728814, stepwise: 0.9491525423728814
 # male forward: 0.9090909090909091, backward: 0.9272727272727272, stepwise: 0.9454545454545454
 
-#-------------------------------
-# Model evaluation
-#-------------------------------
-# Female models
-model_ff = LogisticRegression(solver='newton-cg', max_iter=1000)
-model_ff.fit(X_train_f[features_ff], y_train_f)
-pred_ff = model_ff.predict(X_test_f[features_ff])
-acc_ff = accuracy_score(y_test_f, pred_ff)
+df_accs_f = pd.read_csv('female_accuracies.csv', index_col=0)
+df_accs_m = pd.read_csv('male_accuracies.csv', index_col=0)
 
-model_fb = LogisticRegression(solver='newton-cg', max_iter=1000)
-model_fb.fit(X_train_f[features_fb], y_train_f)
-pred_fb = model_fb.predict(X_test_f[features_fb])
-acc_fb = accuracy_score(y_test_f, pred_fb)
 
-model_fs = LogisticRegression(solver='newton-cg', max_iter=1000)
-model_fs.fit(X_train_f[features_fs], y_train_f)
-pred_fs = model_fs.predict(X_test_f[features_fs])
-acc_fs = accuracy_score(y_test_f, pred_fs)
+for col in df_accs_f.columns:
+    plt.scatter(df_accs_f.index + 1, df_accs_f[col], label=col)
+plt.xlabel("Number of selected features")
+plt.ylabel("Accuracy")
+plt.title("Accuracy after stepwise selection vs. number of features - Female model")
+plt.grid()
+plt.legend()
+plt.xticks(np.arange(1, len(df_accs_f.index) + 1, 1))
+plt.show()
 
-# check accuarcy of female model
-print(f'female forward: {np.round(acc_ff, 4)}, backward: {np.round(acc_fb, 4)}, stepwise: {np.round(acc_fs, 4)}')
+for col in df_accs_m.columns:
+    plt.scatter(df_accs_m.index + 1, df_accs_m[col], label=col)
+plt.xlabel("Number of selected features")
+plt.ylabel("Accuracy")
+plt.title("Accuracy after stepwise selection vs. number of features - Male model")
+plt.grid()
+plt.legend()
+plt.xticks(np.arange(1, len(df_accs_m.index) + 1, 1))
+plt.show()
 
-# # Male models
-# model_mf = LogisticRegression(solver='newton-cg', max_iter=1000)
-# model_mf.fit(X_train_m[features_mf], y_train_m)
-# pred_mf = model_mf.predict(X_test_m[features_mf])
-# acc_mf = accuracy_score(y_test_m, pred_mf)
-
-# model_mb = LogisticRegression(solver='newton-cg', max_iter=1000)
-# model_mb.fit(X_train_m[features_mb], y_train_m)
-# pred_mb = model_mb.predict(X_test_m[features_mb])
-# acc_mb = accuracy_score(y_test_m, pred_mb)
-
-# model_ms = LogisticRegression(solver='newton-cg', max_iter=1000)
-# model_ms.fit(X_train_m[features_ms], y_train_m)
-# pred_ms = model_ms.predict(X_test_m[features_ms])
-# acc_ms = accuracy_score(y_test_m, pred_ms)
-
-# # check accuarcy of male model
-# print(f'male forward: {np.round(acc_mf, 4)}, backward: {np.round(acc_mb, 4)}, stepwise: {np.round(acc_ms, 4)}')
