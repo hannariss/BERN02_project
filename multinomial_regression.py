@@ -25,10 +25,10 @@ stress_data["target_ordered"] = stress_data["target"].map(target_order)
 female = stress_data[stress_data['Gender'] == 1]
 male = stress_data[stress_data['Gender'] == 0]
 
-X_f = female.drop(columns=['Gender', 'target', 'target_encoded', 'target_ordered'])
+X_f = female.drop(columns=['Gender', 'target', 'target_ordered'])
 y_f = female['target_ordered']
 
-X_m = male.drop(columns=['Gender', 'target', 'target_encoded', 'target_ordered'])
+X_m = male.drop(columns=['Gender', 'target', 'target_ordered'])
 y_m = male['target_ordered']
 
 # split data
