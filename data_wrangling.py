@@ -10,7 +10,7 @@ df = df.drop('Have you been dealing with anxiety or tension recently?.1', axis=1
 
 # keywords for column titles 
 keys = [
-    "stress",
+    "recent_stress",
     "heartbeat",
     "anxiety",
     "sleep",
@@ -28,7 +28,7 @@ keys = [
     "relaxation",
     "home_env",
     "confidence_performance",
-    "confidence_subjects",
+    "lack_conf_subjects",
     "activities",
     "attendance",
     "weight",
@@ -41,7 +41,7 @@ df = df.rename(columns=dict(zip(df.columns[2:25], keys)))
 cols_ordered = [
     "Gender",
     "Age",
-    "stress",
+    "recent_stress",
     "heartbeat",
     "anxiety",
     "sleep",
@@ -55,7 +55,7 @@ cols_ordered = [
     "workload",
     "competition",
     "confidence_performance",
-    "confidence_subjects",
+    "lack_conf_subjects",
     "activities",
     "attendance",
     "teacher_diff",

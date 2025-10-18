@@ -1,4 +1,4 @@
-Gender,Age,stress,heartbeat,anxiety,sleep,concentration,sadness,irritation,isolation,headaches,illness,weight,workload,competition,confidence_performance,confidence_subjects,activities,attendance,teacher_diff,work_env,home_env,relationships,relaxation,stresstype
+Gender,Age,recent_stress,heartbeat,anxiety,sleep,concentration,sadness,irritation,isolation,headaches,illness,weight,workload,competition,confidence_performance,lack_conf_subjects,activities,attendance,teacher_diff,work_env,home_env,relationships,relaxation,stresstype
 0,20,3,4,2,5,2,2,1,1,2,3,2,5,1,2,1,3,1,3,1,1,2,4,Eustress (Positive Stress) - Stress that motivates and enhances performance.
 0,20,2,3,2,1,4,2,1,2,1,1,2,1,2,3,2,1,4,3,2,1,4,1,Eustress (Positive Stress) - Stress that motivates and enhances performance.
 0,20,5,4,2,2,2,3,4,3,3,2,1,4,5,4,1,1,2,2,2,1,2,2,Eustress (Positive Stress) - Stress that motivates and enhances performance.
