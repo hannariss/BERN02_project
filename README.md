@@ -11,7 +11,7 @@ This was done by implementing multinomial logistic regression models (separatly 
 
 ## Dataset
 
-The analysis uses a dataset, which is based on a survey on stress and well-being factors among college students (ages 18–21) Available [here] (https://www.kaggle.com/datasets/mdsultanulislamovi/student-stress-monitoring-datasets).
+The analysis uses a dataset, which is based on a survey on stress and well-being factors among college students (ages 18–21) Available [here](https://www.kaggle.com/datasets/mdsultanulislamovi/student-stress-monitoring-datasets).
 This dataset contains various psychological and physiological indicators. The target variable is stress type (Eustress, No stress, Distress), which is mapped to ordered categories for modeling purposes.
 
 ## Dependencies
@@ -74,3 +74,4 @@ The analysis demonstrates that:
 - Implements custom statistical functions for confidence interval calculation
 - Employs proper train-test splitting to avoid data leakage
 - Uses cross-validation principles for model selection
+
