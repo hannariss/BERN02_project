@@ -7,6 +7,7 @@ from sklearn.feature_selection import SequentialFeatureSelector
 from mlxtend.feature_selection import SequentialFeatureSelector as SFS
 from sklearn.metrics import accuracy_score, r2_score
 import matplotlib.pyplot as plt
+import statsmodels.api as sm
 
 
 # load data
@@ -220,19 +221,19 @@ features_mf = list(sfs_m_f.k_feature_names_)
 # features_ms = list(sfs_m_s.k_feature_names_)
 
 
-# not the same features, check some scores
+# # not the same features, check some scores
 model_mf = LogisticRegression(solver='newton-cg', max_iter=1000)
 model_mf.fit(X_train_m[features_mf], y_train_m)
-pred_mf = model_mf.predict(X_test_m[features_mf])
-acc_mf = accuracy_score(y_test_m, pred_mf)
+# pred_mf = model_mf.predict(X_test_m[features_mf])
+# acc_mf = accuracy_score(y_test_m, pred_mf)
 
-model_ms = LogisticRegression(solver='newton-cg', max_iter=1000)
-model_ms.fit(X_train_m[features_ms], y_train_m)
-pred_ms = model_ms.predict(X_test_m[features_ms])
-acc_ms = accuracy_score(y_test_m, pred_ms)
+# model_ms = LogisticRegression(solver='newton-cg', max_iter=1000)
+# model_ms.fit(X_train_m[features_ms], y_train_m)
+# pred_ms = model_ms.predict(X_test_m[features_ms])
+# acc_ms = accuracy_score(y_test_m, pred_ms)
 
-r2_mf = r2_score(y_test_m, pred_mf)
-r2_ms = r2_score(y_test_m, pred_ms)
+# r2_mf = r2_score(y_test_m, pred_mf)
+# r2_ms = r2_score(y_test_m, pred_ms)
 
 # calculate AIC for male model to
 # find the better model between forward and floating
@@ -247,17 +248,17 @@ k = n_features * (n_classes -1) + (n_classes -1)
 
 aic_mf = 2*k - 2*log_like
 
-#floating
-probs_ms = model_ms.predict_proba(X_test_m[features_ms])
-log_like = np.sum(np.log(probs_ms[np.arange(len(y_test_m)), y_test_m]))
+# #floating
+# probs_ms = model_ms.predict_proba(X_test_m[features_ms])
+# log_like = np.sum(np.log(probs_ms[np.arange(len(y_test_m)), y_test_m]))
 
-n_classes = 3
-n_features = len(features_ms)
-k = n_features * (n_classes -1) + (n_classes -1)
+# n_classes = 3
+# n_features = len(features_ms)
+# k = n_features * (n_classes -1) + (n_classes -1)
 
-aic_ms = 2*k - 2*log_like
-print(f'forward: {aic_mf}, floating: {aic_ms}')
-# Conclusion: forward selection model is better
+# aic_ms = 2*k - 2*log_like
+# print(f'forward: {aic_mf}, floating: {aic_ms}')
+# # Conclusion: forward selection model is better
 
 #--------------------------------
 # Final model:
@@ -279,3 +280,246 @@ coef_mf = pd.DataFrame(model_mf.coef_, columns=X_test_m[features_mf].columns, in
 # save training and test data with selected features
 np.savetxt('features_ff.csv', features_ff, delimiter=",", fmt='%s')
 np.savetxt('features_mf.csv', features_mf, delimiter=",", fmt='%s')
+
+#------------------------------------------
+# Confidence Intervals
+#------------------------------------------
+from scipy.linalg import inv
+from numpy.linalg import inv, svd
+
+# %%
+def softmax(logits):
+    logits = logits - logits.max(axis=1, keepdims=True)
+    exp_logits = np.exp(logits)
+    return exp_logits / exp_logits.sum(axis=1, keepdims=True)
+
+def hessian_full_softmax(X, y, B):
+    """
+    Compute the Hessian and covariance for the full softmax model
+    (no reference class dropped).
+
+    Parameters
+    ----------
+    X : (n_samples, p)
+        Feature matrix (include intercept if needed)
+    y : (n_samples,)
+        Labels 0..K-1
+    B : (p, K)
+        Coefficient matrix (all K classes, not baseline-relative)
+
+    Returns
+    -------
+    H : (p*K, p*K)
+        Observed information matrix (positive semi-definite)
+    cov : (p*K, p*K)
+        Generalized inverse (pseudoinverse) of H for covariance
+    se : (p*K,)
+        Standard errors for flattened coefficients
+    """
+    n, p = X.shape
+    K = B.shape[1]
+    logits = X @ B
+    P = softmax(logits)
+
+    H = np.zeros((p * K, p * K))
+    for i in range(n):
+        p_i = P[i]
+        W_i = np.diag(p_i) - np.outer(p_i, p_i)  # (K, K)
+        XiXiT = np.outer(X[i], X[i])             # (p, p)
+        H += np.kron(W_i, XiXiT)
+
+    # H is positive semidefinite but singular because of invariance
+    # Use Moore-Penrose pseudoinverse instead of regular inverse
+    U, s, Vt = svd(H)
+    tol = 1e-10
+    s_inv = np.where(s > tol, 1.0 / s, 0.0)
+    cov = (Vt.T * s_inv) @ U.T
+    se = np.sqrt(np.diag(cov))
+    return H, cov, se
+# %%
+# Female 
+# assemble coef including intercept as first column
+coef_f = model_ff.coef_           # (K, p_no_intercept)
+intercept_f = model_ff.intercept_ # (K,)
+
+# build full coef matrix shape (K, p) where p = p_no_intercept + 1
+betas_f = np.hstack([intercept_f[:, None], coef_f])  # (K, p)
+
+X = X_train_f[features_ff]
+y = y_train_f
+
+# X must include intercept column first
+X_aug = np.hstack([np.ones((X.shape[0], 1)), X])  # (n, p)
+H, cov, se = hessian_full_softmax(X_aug, y, betas_f.T)
+
+z = 1.96
+ci_lower = betas_f.flatten() - z * se
+ci_upper = betas_f.flatten() + z * se
+
+ci_lower_f = ci_lower.reshape(betas_f.shape)
+ci_upper_f = ci_upper.reshape(betas_f.shape)
+
+# %%
+# Male 
+# assemble coef including intercept as first column
+coef_m = model_mf.coef_           # (K, p_no_intercept)
+intercept_m = model_mf.intercept_ # (K,)
+
+# build full coef matrix shape (K, p) where p = p_no_intercept + 1
+betas_m = np.hstack([intercept_m[:, None], coef_m])  # (K, p)
+
+X = X_train_m[features_mf]
+y = y_train_m
+
+# X must include intercept column first
+X_aug = np.hstack([np.ones((X.shape[0], 1)), X])  # (n, p)
+H, cov, se = hessian_full_softmax(X_aug, y, betas_m.T)
+
+z = 1.96
+ci_lower = betas_m.flatten() - z * se
+ci_upper = betas_m.flatten() + z * se
+
+ci_lower_m = ci_lower.reshape(betas_m.shape)
+ci_upper_m = ci_upper.reshape(betas_m.shape)
+
+# %%
+# Plot with CIs 
+import seaborn as sns
+
+# Define custom colors
+custom_palette = {
+    0: sns.color_palette("muted")[2],  # greenish
+    1: sns.color_palette("muted")[0],  # bluish
+    2: sns.color_palette("muted")[3],  # reddish
+}
+
+ci_lower_f_df = pd.DataFrame(ci_lower_f[:, 1:], columns=coef_ff.columns)
+ci_upper_f_df = pd.DataFrame(ci_upper_f[:, 1:], columns=coef_ff.columns)
+
+ci_lower_m_df = pd.DataFrame(ci_lower_m[:, 1:], columns=coef_mf.columns)
+ci_upper_m_df = pd.DataFrame(ci_upper_m[:, 1:], columns=coef_mf.columns)
+
+df_f = coef_ff.reset_index().melt(id_vars='index', var_name='Column', value_name='Value')
+df_m = coef_mf.reset_index().melt(id_vars='index', var_name='Column', value_name='Value')
+
+# Map categorical 'Column' to numeric positions
+col_mapping_f = {col: i  for i, col in enumerate(df_f['Column'].unique())}
+df_f['y_numeric'] = df_f['Column'].map(col_mapping_f)
+
+n_points = df_f['index'].nunique() 
+offset = 0.25
+offset_dict = {0: 0, 1: offset, 2: -offset} 
+
+# Map index to offset
+index_mapping = {idx: offset_dict[i] for i, idx in enumerate(df_f['index'].unique())}
+df_f['y_numeric_shifted'] = df_f['y_numeric'] + df_f['index'].map(index_mapping)
+
+# Female model CI lines
+ci_lower_long_f = ci_lower_f_df.melt(var_name='Column', value_name='ci_lower')
+ci_upper_long_f = ci_upper_f_df.melt(var_name='Column', value_name='ci_upper')
+
+# Merge to align by Column and index (class)
+df_ci = pd.concat([df_f, ci_lower_long_f.iloc[:,1], ci_upper_long_f.iloc[:, 1]],axis=1)
+
+
+# Map categorical 'Column' to numeric positions
+col_mapping_m = {col: i  for i, col in enumerate(df_m['Column'].unique())}
+df_m['y_numeric'] = df_m['Column'].map(col_mapping_m)
+
+n_points = df_m['index'].nunique() 
+offset = 0.25
+offset_dict = {0: 0, 1: offset, 2: -offset} 
+
+# Map index to offset
+index_mapping = {idx: offset_dict[i] for i, idx in enumerate(df_m['index'].unique())}
+df_m['y_numeric_shifted'] = df_m['y_numeric'] + df_m['index'].map(index_mapping)
+
+# Female model CI lines
+ci_lower_long_m = ci_lower_m_df.melt(var_name='Column', value_name='ci_lower')
+ci_upper_long_m = ci_upper_m_df.melt(var_name='Column', value_name='ci_upper')
+
+# Merge to align by Column and index (class)
+df_ci_m = pd.concat([df_m, ci_lower_long_m.iloc[:,1], ci_upper_long_m.iloc[:, 1]],axis=1)
+
+
+# Plot
+fig, axes = plt.subplots(1, 2, figsize=(10,7), sharex=True)
+
+sns.scatterplot(
+    data=df_f,
+    x='Value',
+    y='y_numeric_shifted',
+    hue='index',
+    palette=custom_palette,
+    s=150,
+    ax=axes[0]
+)
+
+axes[0].axvline(0, color='gray', linestyle='--', linewidth=1)
+axes[0].grid(True, linestyle='--', alpha=0.6)
+axes[0].set_xlabel(r"Coefficient value ($\beta_i$)")  # Remove x-label on top plot
+axes[0].set_ylabel("")
+axes[0].set_title("Female model", fontsize=14)
+axes[0].set_yticks(list(col_mapping_f.values()), list(col_mapping_f.keys())[::-1])
+
+# Plot CIs as horizontal lines
+for _, row in df_ci.iterrows():
+    axes[0].hlines(
+        y=row['y_numeric_shifted'],
+        xmin=row['ci_lower'],
+        xmax=row['ci_upper'],
+        color=custom_palette[row['index']],
+        alpha=0.9,
+        linewidth=3
+    )
+
+# Male model
+sns.scatterplot(
+    data=df_m,
+    x='Value',
+    y='y_numeric_shifted',
+    hue='index',
+    palette=custom_palette,
+    s=150,
+    ax=axes[1]
+)
+axes[1].axvline(0, color='gray', linestyle='--', linewidth=1)
+axes[1].grid(True, linestyle='--', alpha=0.6)
+axes[1].set_xlabel(r"Coefficient value ($\beta_i$)")
+axes[1].set_yticks(list(col_mapping_m.values()), list(col_mapping_m.keys())[::-1])
+axes[1].set_ylabel("")
+axes[1].set_title("Male model", fontsize=14)
+
+# Plot CIs as horizontal lines
+for _, row in df_ci_m.iterrows():
+    axes[1].hlines(
+        y=row['y_numeric_shifted'],
+        xmin=row['ci_lower'],
+        xmax=row['ci_upper'],
+        color=custom_palette[row['index']],
+        alpha=0.9,
+        linewidth=3
+    )
+
+# Shared legend outside the plot
+handles, labels = axes[0].get_legend_handles_labels()
+fig.legend(
+    handles,
+    ['Eustress', 'No Stress', 'Distress'],
+    title='Categories',
+    loc='lower center',
+    ncol=3,              
+    frameon=True,
+    facecolor='white',
+    bbox_to_anchor=(0.5, -0.1) 
+)
+
+# Remove duplicate legends inside subplots
+axes[0].get_legend().remove()
+axes[1].get_legend().remove()
+
+fig.suptitle("Feature coefficients for different stress levels", fontsize=15, ha='center')
+plt.tight_layout()
+plt.show()
+
+# %%
