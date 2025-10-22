@@ -4,7 +4,7 @@
 
 ## Problem description
 The goal of the analysis is to find potential gender differences in stress patterns.
-This was done by implementing multinomial logistic regression models (separatly for male and female participants) to classify stress levels into three categories:
+This was done by implementing multinomial logistic regression models (separately for male and female participants) to classify stress levels into three categories:
 - **Eustress (Positive Stress)** - Stress that motivates and enhances performance
 - **No Stress** - Currently experiencing minimal to no stress  
 - **Distress (Negative Stress)** - Stress that causes anxiety and impairs well-being
@@ -74,4 +74,5 @@ The analysis demonstrates that:
 - Implements custom statistical functions for confidence interval calculation
 - Employs proper train-test splitting to avoid data leakage
 - Uses cross-validation principles for model selection
+
 
